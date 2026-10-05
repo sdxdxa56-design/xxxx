@@ -35,6 +35,10 @@ class ErrorRepositoryImpl(
         return errorDao.insertError(AppErrorEntity.fromDomain(error))
     }
 
+    override suspend fun saveError(error: AppError): Long {
+        return insertError(error)
+    }
+
     override suspend fun deleteError(error: AppError) {
         errorDao.deleteError(AppErrorEntity.fromDomain(error))
     }

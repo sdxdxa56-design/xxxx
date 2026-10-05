@@ -9,6 +9,7 @@ interface ErrorRepository {
     fun getErrorById(id: Long): Flow<AppError?>
     fun getErrorCount(): Flow<Int>
     suspend fun insertError(error: AppError): Long
+    suspend fun saveError(error: AppError): Long
     suspend fun deleteError(error: AppError)
     suspend fun deleteAllErrors()
 }

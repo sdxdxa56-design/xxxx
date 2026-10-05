@@ -14,6 +14,9 @@ class AppInspectorApp : Application() {
     lateinit var repository: ErrorRepository
         private set
 
+    val errorRepository: ErrorRepository
+        get() = repository
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -34,7 +37,7 @@ class AppInspectorApp : Application() {
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
-                CHANNEL_SERVICE_ID,
+                NOTIFICATION_CHANNEL_ID,
                 "Logcat Monitor Service",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
@@ -57,7 +60,8 @@ class AppInspectorApp : Application() {
     }
 
     companion object {
-        const val CHANNEL_SERVICE_ID = "logcat_service_channel"
+        const val NOTIFICATION_CHANNEL_ID = "logcat_service_channel"
+        const val CHANNEL_SERVICE_ID = NOTIFICATION_CHANNEL_ID
         const val CHANNEL_ALERTS_ID = "app_alerts_channel"
 
         lateinit var instance: AppInspectorApp
