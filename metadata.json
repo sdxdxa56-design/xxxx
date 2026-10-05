@@ -1,0 +1,6 @@
+{
+  "name": "مراقب التطبيقات (App Inspector)",
+  "description": "منظومة متكاملة لفحص وتشغيل ومراقبة تطبيقات أندرويد، وتحليل سجلات Logcat، الانهيارات، ANR، مع الكود المصدري الكامل بلغة Kotlin و Jetpack Compose ودعم Work Profile.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
