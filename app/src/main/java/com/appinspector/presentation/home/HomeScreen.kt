@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -54,7 +55,8 @@ import java.util.Locale
 fun HomeScreen(
     viewModel: HomeViewModel,
     onNavigateToMonitor: () -> Unit,
-    onNavigateToDetail: (Long) -> Unit
+    onNavigateToDetail: (Long) -> Unit,
+    onNavigateToGitHub: () -> Unit
 ) {
     val context = LocalContext.current
     val errors by viewModel.errors.collectAsState()
@@ -134,6 +136,13 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToGitHub) {
+                        Icon(
+                            imageVector = Icons.Default.Code,
+                            contentDescription = "GitHub",
+                            tint = PrimaryEmerald
+                        )
+                    }
                     IconButton(onClick = onNavigateToMonitor) {
                         Icon(
                             imageVector = Icons.Default.Terminal,
@@ -178,7 +187,8 @@ fun HomeScreen(
                         viewModel.setServiceRunning(true)
                     }
                 },
-                onOpenMonitor = onNavigateToMonitor
+                onOpenMonitor = onNavigateToMonitor,
+                onOpenGitHub = onNavigateToGitHub
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -249,7 +259,8 @@ fun ControlCard(
     isRunning: Boolean,
     errorCount: Int,
     onToggleService: () -> Unit,
-    onOpenMonitor: () -> Unit
+    onOpenMonitor: () -> Unit,
+    onOpenGitHub: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
@@ -315,6 +326,31 @@ fun ControlCard(
             }
 
             Spacer(modifier = Modifier.height(14.dp))
+
+            OutlinedButton(
+                onClick = onOpenGitHub,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = SurfaceVariantDark.copy(alpha = 0.5f),
+                    contentColor = PrimaryEmerald
+                ),
+                border = ButtonDefaults.outlinedButtonBorder(true).copy(
+                    brush = androidx.compose.ui.graphics.SolidColor(PrimaryEmerald.copy(alpha = 0.5f))
+                )
+            ) {
+                Icon(Icons.Default.Code, contentDescription = null, tint = PrimaryEmerald, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "📦 Import from GitHub",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Button(
                 onClick = onOpenMonitor,
