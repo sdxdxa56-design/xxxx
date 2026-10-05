@@ -243,13 +243,23 @@ class GitHubRepository(
         branch: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val response = api.triggerWorkflow(
-                authHeader = getAuthHeader(),
-                owner = owner,
-                repo = repo,
-                workflowId = WORKFLOW_FILE,
-                body = WorkflowDispatchRequest(ref = branch)
-            )
+            val response = try {
+                api.triggerWorkflow(
+                    authHeader = getAuthHeader(),
+                    owner = owner,
+                    repo = repo,
+                    workflowId = WORKFLOW_FILE,
+                    body = WorkflowDispatchRequest(ref = branch)
+                )
+            } catch (_: Exception) {
+                api.triggerWorkflow(
+                    authHeader = getAuthHeader(),
+                    owner = owner,
+                    repo = repo,
+                    workflowId = "build_apk.yml",
+                    body = WorkflowDispatchRequest(ref = branch)
+                )
+            }
             if (response.isSuccessful) {
                 Result.success(Unit)
             } else {
@@ -279,19 +289,20 @@ class GitHubRepository(
     suspend fun pollBuildUntilComplete(
         owner: String,
         repo: String,
+        runId: Long? = null,
         onStatusUpdate: (WorkflowRunDto) -> Unit,
         pollIntervalMs: Long = 5000,
         timeoutMs: Long = 15 * 60 * 1000
     ): Result<WorkflowRunDto> = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
-        var runId: Long? = null
+        var currentRunId: Long? = runId
 
         while (System.currentTimeMillis() - startTime < timeoutMs) {
-            if (runId == null) {
+            if (currentRunId == null) {
                 val latestResult = getLatestRun(owner, repo)
                 val run = latestResult.getOrNull()
                 if (run != null) {
-                    runId = run.id
+                    currentRunId = run.id
                     onStatusUpdate(run)
                     if (run.status == "completed") {
                         return@withContext Result.success(run)
@@ -299,7 +310,7 @@ class GitHubRepository(
                 }
             } else {
                 try {
-                    val run = api.getWorkflowRun(getAuthHeader(), owner, repo, runId)
+                    val run = api.getWorkflowRun(getAuthHeader(), owner, repo, currentRunId)
                     onStatusUpdate(run)
                     if (run.status == "completed") {
                         return@withContext Result.success(run)
@@ -380,6 +391,6 @@ class GitHubRepository(
 
     companion object {
         private const val BASE_URL = "https://api.github.com/"
-        private const val WORKFLOW_FILE = "build_apk.yml"
+        private const val WORKFLOW_FILE = "build.yml"
     }
 }
