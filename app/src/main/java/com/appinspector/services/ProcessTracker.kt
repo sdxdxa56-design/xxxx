@@ -15,7 +15,7 @@ object ProcessTracker {
 
         try {
             val procDir = File("/proc")
-            val pidDirs = procDir.listFiles { file -> file.isDirectory && file.name.all { it.isDigit() } }
+            val pidDirs = procDir.listFiles { file: File -> file.isDirectory && file.name.all { it.isDigit() } }
             if (pidDirs != null) {
                 for (dir in pidDirs) {
                     val cmdlineFile = File(dir, "cmdline")

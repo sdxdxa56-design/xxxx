@@ -391,6 +391,6 @@ class GitHubRepository(
 
     companion object {
         private const val BASE_URL = "https://api.github.com/"
-        private const val WORKFLOW_FILE = "build.yml"
+        private const val WORKFLOW_FILE = "build_apk.yml"
     }
 }

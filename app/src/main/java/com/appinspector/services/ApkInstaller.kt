@@ -14,7 +14,7 @@ object ApkInstaller {
             val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 packageManager.getPackageArchiveInfo(
                     apkFile.absolutePath,
-                    PackageManager.PackageInfoFlags.of(0)
+                    PackageManager.PackageInfoFlags.of(0L)
                 )
             } else {
                 @Suppress("DEPRECATION")
@@ -33,7 +33,7 @@ object ApkInstaller {
             val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 packageManager.getPackageArchiveInfo(
                     apkFile.absolutePath,
-                    PackageManager.PackageInfoFlags.of(0)
+                    PackageManager.PackageInfoFlags.of(0L)
                 )
             } else {
                 @Suppress("DEPRECATION")
