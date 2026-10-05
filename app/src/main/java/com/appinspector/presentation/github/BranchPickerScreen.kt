@@ -1,5 +1,6 @@
 package com.appinspector.presentation.github
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -243,7 +244,7 @@ fun BranchPickerScreen(
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (isSelected) SurfaceVariantDark else SurfaceDark
                                 ),
-                                border = if (isSelected) ButtonDefaults.outlinedButtonBorder(true).copy(brush = androidx.compose.ui.graphics.SolidColor(PrimaryEmerald)) else null
+                                border = if (isSelected) BorderStroke(1.dp, PrimaryEmerald) else null
                             ) {
                                 Row(
                                     modifier = Modifier

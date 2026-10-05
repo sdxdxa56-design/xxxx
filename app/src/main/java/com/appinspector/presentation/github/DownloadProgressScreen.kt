@@ -129,7 +129,7 @@ fun DownloadProgressScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             LinearProgressIndicator(
-                                progress = { state.progress },
+                                progress = state.progress,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp),

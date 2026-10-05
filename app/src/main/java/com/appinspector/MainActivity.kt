@@ -228,7 +228,7 @@ fun AppNavigation(
                 repo = repo,
                 branch = branch,
                 viewModel = gitHubViewModel,
-                onDownloadComplete = {
+                onDownloadComplete = { _ ->
                     navController.navigate(Screen.BuildProgress.createRoute(owner, repo, branch)) {
                         popUpTo(Screen.DownloadProgress.route) { inclusive = true }
                     }

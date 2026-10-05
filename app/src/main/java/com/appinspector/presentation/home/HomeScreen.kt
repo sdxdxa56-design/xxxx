@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -337,9 +338,7 @@ fun ControlCard(
                     containerColor = SurfaceVariantDark.copy(alpha = 0.5f),
                     contentColor = PrimaryEmerald
                 ),
-                border = ButtonDefaults.outlinedButtonBorder(true).copy(
-                    brush = androidx.compose.ui.graphics.SolidColor(PrimaryEmerald.copy(alpha = 0.5f))
-                )
+                border = BorderStroke(1.dp, PrimaryEmerald.copy(alpha = 0.5f))
             ) {
                 Icon(Icons.Default.Code, contentDescription = null, tint = PrimaryEmerald, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
