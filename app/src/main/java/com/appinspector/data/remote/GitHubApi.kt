@@ -1,16 +1,9 @@
 package com.appinspector.data.remote
 
-import com.appinspector.data.remote.dto.BranchDto
-import com.appinspector.data.remote.dto.ContentDto
-import com.appinspector.data.remote.dto.RepoDto
-import com.appinspector.data.remote.dto.TreeResponse
-import com.appinspector.data.remote.dto.UserDto
+import com.appinspector.data.remote.dto.*
 import okhttp3.ResponseBody
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.Path
-import retrofit2.http.Query
-import retrofit2.http.Url
+import retrofit2.Response
+import retrofit2.http.*
 
 interface GitHubApi {
 
@@ -58,4 +51,86 @@ interface GitHubApi {
         @Header("Authorization") authHeader: String,
         @Url url: String
     ): ResponseBody
+
+    @POST("repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches")
+    suspend fun triggerWorkflow(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("workflow_id") workflowId: String,
+        @Body body: WorkflowDispatchRequest
+    ): Response<Unit>
+
+    @GET("repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs")
+    suspend fun getWorkflowRuns(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("workflow_id") workflowId: String,
+        @Query("per_page") perPage: Int = 5
+    ): WorkflowRunsResponse
+
+    @GET("repos/{owner}/{repo}/actions/runs")
+    suspend fun getAllWorkflowRuns(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Query("per_page") perPage: Int = 5
+    ): WorkflowRunsResponse
+
+    @GET("repos/{owner}/{repo}/actions/runs/{run_id}")
+    suspend fun getWorkflowRun(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("run_id") runId: Long
+    ): WorkflowRunDto
+
+    @GET("repos/{owner}/{repo}/actions/runs/{run_id}/artifacts")
+    suspend fun getRunArtifacts(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("run_id") runId: Long
+    ): ArtifactsResponse
+
+    @Streaming
+    @GET
+    suspend fun downloadArtifact(
+        @Header("Authorization") authHeader: String,
+        @Url url: String
+    ): ResponseBody
+
+    @POST("repos/{owner}/{repo}/git/blobs")
+    suspend fun createBlob(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Body body: CreateBlobRequest
+    ): CreateBlobResponse
+
+    @POST("repos/{owner}/{repo}/git/trees")
+    suspend fun createTree(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Body body: CreateTreeRequest
+    ): TreeResponse
+
+    @POST("repos/{owner}/{repo}/git/commits")
+    suspend fun createCommit(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Body body: CreateCommitRequest
+    ): CommitDto
+
+    @PATCH("repos/{owner}/{repo}/git/refs/heads/{branch}")
+    suspend fun updateRef(
+        @Header("Authorization") authHeader: String,
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("branch") branch: String,
+        @Body body: UpdateRefRequest
+    ): Response<Unit>
 }
