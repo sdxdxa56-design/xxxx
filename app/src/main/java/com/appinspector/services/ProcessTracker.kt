@@ -31,21 +31,19 @@ object ProcessTracker {
         }
 
         try {
-            if (Shell.isAppGrantedRoot() == true) {
-                val result = Shell.cmd("pidof $packageName").exec()
-                if (result.isSuccess && result.out.isNotEmpty()) {
-                    val pidStr = result.out.firstOrNull()?.trim()?.split(" ")?.firstOrNull()
-                    val pid = pidStr?.toIntOrNull()
-                    if (pid != null) return pid
-                }
+            val result = Shell.cmd("pidof $packageName").exec()
+            if (result.isSuccess && result.out.isNotEmpty()) {
+                val pidStr = result.out.firstOrNull()?.trim()?.split(" ")?.firstOrNull()
+                val pid = pidStr?.toIntOrNull()
+                if (pid != null) return pid
+            }
 
-                val psResult = Shell.cmd("ps -A | grep $packageName").exec()
-                for (line in psResult.out) {
-                    val tokens = line.trim().split(Regex("\\s+"))
-                    if (tokens.size >= 2 && tokens.any { it.contains(packageName) }) {
-                        val candidatePid = tokens[1].toIntOrNull()
-                        if (candidatePid != null) return candidatePid
-                    }
+            val psResult = Shell.cmd("ps -A | grep $packageName").exec()
+            for (line in psResult.out) {
+                val tokens = line.trim().split(Regex("\\s+"))
+                if (tokens.size >= 2 && tokens.any { it.contains(packageName) }) {
+                    val candidatePid = tokens[1].toIntOrNull()
+                    if (candidatePid != null) return candidatePid
                 }
             }
         } catch (_: Exception) {
