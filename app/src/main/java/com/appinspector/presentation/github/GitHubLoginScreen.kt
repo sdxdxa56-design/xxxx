@@ -23,7 +23,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.appinspector.data.repository.GitHubRepository
-import com.appinspector.presentation.theme.AccentRed
+import com.appinspector.presentation.theme.CrashRed
 import com.appinspector.presentation.theme.PrimaryEmerald
 import com.appinspector.presentation.theme.SurfaceDark
 import com.appinspector.presentation.theme.SurfaceVariantDark
@@ -182,18 +182,18 @@ fun GitHubLoginScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = AccentRed.copy(alpha = 0.15f)),
+                        colors = CardDefaults.cardColors(containerColor = CrashRed.copy(alpha = 0.15f)),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = AccentRed)
+                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = CrashRed)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = errorMessage.orEmpty(),
-                                color = AccentRed,
+                                color = CrashRed,
                                 fontSize = 13.sp
                             )
                         }
@@ -214,7 +214,7 @@ fun GitHubLoginScreen(
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = AccentRed
+                            contentColor = CrashRed
                         )
                     ) {
                         Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))

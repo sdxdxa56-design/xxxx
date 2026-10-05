@@ -1,7 +1,6 @@
 package com.appinspector.data.repository
 
 import android.content.Context
-import android.util.Base64
 import com.appinspector.data.local.GitHubCredentials
 import com.appinspector.data.remote.GitHubApi
 import com.appinspector.data.remote.dto.BranchDto
@@ -25,7 +24,7 @@ class GitHubRepository(
 
     private val api: GitHubApi by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = HttpLoggingInterceptor.Level.NONE
         }
 
         val okHttpClient = OkHttpClient.Builder()
