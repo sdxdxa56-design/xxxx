@@ -82,21 +82,50 @@ class LogcatService : Service() {
         }
     }
 
+    private fun isLineMatchingTarget(line: String): Boolean {
+        val targetPkg = _targetPackage.value
+        val targetP = _targetPid.value
+
+        if (targetPkg.isNullOrBlank() && targetP == null) {
+            return true
+        }
+
+        if (targetP != null && (line.contains("$targetP") || line.contains("PID: $targetP") || line.contains("pid $targetP"))) {
+            return true
+        }
+
+        if (!targetPkg.isNullOrBlank() && line.contains(targetPkg, ignoreCase = true)) {
+            return true
+        }
+
+        return false
+    }
+
     private fun processLine(line: String) {
         _latestLogLine.value = line
+
+        val isTargetMatch = isLineMatchingTarget(line)
+
         if (ErrorAnalyzer.isCriticalErrorStart(line)) {
             if (isCollecting && crashBuffer.isNotEmpty()) {
                 saveCrash(crashBuffer.toString())
                 crashBuffer.clear()
             }
-            isCollecting = true
-            crashBuffer.append(line).append("\n")
+
+            if (isTargetMatch) {
+                isCollecting = true
+                crashBuffer.append(line).append("\n")
+            } else {
+                isCollecting = false
+            }
             return
         }
+
         if (isCollecting) {
             if (line.contains("at ") || line.contains("AndroidRuntime")
                 || line.contains("Process:")
-                || line.trim().startsWith("java.")) {
+                || line.trim().startsWith("java.")
+                || isTargetMatch) {
                 crashBuffer.append(line).append("\n")
             } else {
                 saveCrash(crashBuffer.toString())
@@ -108,6 +137,11 @@ class LogcatService : Service() {
 
     private fun saveCrash(chunk: String) {
         val parsed = ErrorAnalyzer.parseCrashChunk(chunk) ?: return
+        val targetPkg = _targetPackage.value
+        if (!targetPkg.isNullOrBlank() && !parsed.packageName.contains(targetPkg, ignoreCase = true) && !parsed.stackTrace.contains(targetPkg, ignoreCase = true)) {
+            return
+        }
+
         serviceScope.launch {
             (application as AppInspectorApp).errorRepository.saveError(parsed)
         }
@@ -122,9 +156,16 @@ class LogcatService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val targetPkg = _targetPackage.value
+        val content = if (targetPkg.isNullOrBlank()) {
+            "Actively monitoring system and app errors in real-time"
+        } else {
+            "Tracking target application: $targetPkg"
+        }
+
         return NotificationCompat.Builder(this, AppInspectorApp.NOTIFICATION_CHANNEL_ID)
             .setContentTitle("App Inspector Running")
-            .setContentText("Actively monitoring system and app errors in real-time")
+            .setContentText(content)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -155,6 +196,23 @@ class LogcatService : Service() {
 
         private val _latestLogLine = MutableStateFlow("")
         val latestLogLine: StateFlow<String> = _latestLogLine.asStateFlow()
+
+        private val _targetPackage = MutableStateFlow<String?>(null)
+        val targetPackage: StateFlow<String?> = _targetPackage.asStateFlow()
+
+        private val _targetPid = MutableStateFlow<Int?>(null)
+        val targetPid: StateFlow<Int?> = _targetPid.asStateFlow()
+
+        fun setTargetPackage(context: Context, packageName: String, pid: Int? = null) {
+            _targetPackage.value = packageName
+            _targetPid.value = pid
+            start(context)
+        }
+
+        fun clearTarget() {
+            _targetPackage.value = null
+            _targetPid.value = null
+        }
 
         fun start(context: Context) {
             val intent = Intent(context, LogcatService::class.java)
