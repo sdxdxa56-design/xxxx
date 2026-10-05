@@ -1,21 +1,22 @@
 package com.appinspector.data.repository
 
 import android.content.Context
+import android.util.Base64
 import com.appinspector.data.local.GitHubCredentials
 import com.appinspector.data.remote.GitHubApi
-import com.appinspector.data.remote.dto.BranchDto
-import com.appinspector.data.remote.dto.RepoDto
-import com.appinspector.data.remote.dto.TreeItem
-import com.appinspector.data.remote.dto.UserDto
+import com.appinspector.data.remote.dto.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
+import java.util.zip.ZipInputStream
 
 class GitHubRepository(
     private val context: Context,
@@ -157,7 +158,228 @@ class GitHubRepository(
         }
     }
 
+    suspend fun pushLocalProjectToGitHub(
+        owner: String,
+        repo: String,
+        branch: String,
+        localDir: File,
+        commitMessage: String,
+        onProgress: (Int, Int) -> Unit
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val allFiles = localDir.walkTopDown()
+                .filter { it.isFile && !it.path.contains("/.git/") && !it.path.contains("/build/") }
+                .toList()
+
+            val totalFiles = allFiles.size
+            val treeEntries = mutableListOf<TreeEntryDto>()
+            var processed = 0
+
+            for (file in allFiles) {
+                val relativePath = file.relativeTo(localDir).path.replace('\\', '/')
+                val bytes = file.readBytes()
+                val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
+
+                val blobResponse = api.createBlob(
+                    authHeader = getAuthHeader(),
+                    owner = owner,
+                    repo = repo,
+                    body = CreateBlobRequest(content = base64Content, encoding = "base64")
+                )
+
+                treeEntries.add(
+                    TreeEntryDto(
+                        path = relativePath,
+                        mode = if (file.name == "gradlew" || file.canExecute()) "100755" else "100644",
+                        type = "blob",
+                        sha = blobResponse.sha
+                    )
+                )
+
+                processed++
+                onProgress(processed, totalFiles)
+            }
+
+            val branchesResult = getBranches(owner, repo)
+            val currentBranch = branchesResult.getOrNull()?.find { it.name == branch }
+            val parentSha = currentBranch?.commit?.sha
+
+            val treeResponse = api.createTree(
+                authHeader = getAuthHeader(),
+                owner = owner,
+                repo = repo,
+                body = CreateTreeRequest(baseTree = null, tree = treeEntries)
+            )
+
+            val parents = if (parentSha != null) listOf(parentSha) else emptyList()
+            val commitResponse = api.createCommit(
+                authHeader = getAuthHeader(),
+                owner = owner,
+                repo = repo,
+                body = CreateCommitRequest(
+                    message = commitMessage,
+                    tree = treeResponse.sha,
+                    parents = parents
+                )
+            )
+
+            api.updateRef(
+                authHeader = getAuthHeader(),
+                owner = owner,
+                repo = repo,
+                branch = branch,
+                body = UpdateRefRequest(sha = commitResponse.sha, force = true)
+            )
+
+            Result.success(commitResponse.sha)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun triggerBuildWorkflow(
+        owner: String,
+        repo: String,
+        branch: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.triggerWorkflow(
+                authHeader = getAuthHeader(),
+                owner = owner,
+                repo = repo,
+                workflowId = WORKFLOW_FILE,
+                body = WorkflowDispatchRequest(ref = branch)
+            )
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("HTTP ${response.code()}: ${response.message()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getLatestRun(
+        owner: String,
+        repo: String
+    ): Result<WorkflowRunDto?> = withContext(Dispatchers.IO) {
+        try {
+            val runsResponse = try {
+                api.getWorkflowRuns(getAuthHeader(), owner, repo, WORKFLOW_FILE, perPage = 1)
+            } catch (_: Exception) {
+                api.getAllWorkflowRuns(getAuthHeader(), owner, repo, perPage = 1)
+            }
+            Result.success(runsResponse.workflow_runs.firstOrNull())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun pollBuildUntilComplete(
+        owner: String,
+        repo: String,
+        onStatusUpdate: (WorkflowRunDto) -> Unit,
+        pollIntervalMs: Long = 5000,
+        timeoutMs: Long = 15 * 60 * 1000
+    ): Result<WorkflowRunDto> = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        var runId: Long? = null
+
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            if (runId == null) {
+                val latestResult = getLatestRun(owner, repo)
+                val run = latestResult.getOrNull()
+                if (run != null) {
+                    runId = run.id
+                    onStatusUpdate(run)
+                    if (run.status == "completed") {
+                        return@withContext Result.success(run)
+                    }
+                }
+            } else {
+                try {
+                    val run = api.getWorkflowRun(getAuthHeader(), owner, repo, runId)
+                    onStatusUpdate(run)
+                    if (run.status == "completed") {
+                        return@withContext Result.success(run)
+                    }
+                } catch (_: Exception) {
+                }
+            }
+
+            delay(pollIntervalMs)
+        }
+
+        Result.failure(Exception("Build monitoring timed out after ${timeoutMs / 60000} minutes."))
+    }
+
+    suspend fun downloadApkFromArtifacts(
+        owner: String,
+        repo: String,
+        runId: Long,
+        destinationFile: File,
+        onProgress: (Long, Long) -> Unit
+    ): Result<File> = withContext(Dispatchers.IO) {
+        try {
+            val artifactsResponse = api.getRunArtifacts(getAuthHeader(), owner, repo, runId)
+            val artifact = artifactsResponse.artifacts.firstOrNull {
+                !it.expired && (it.name.contains("apk", ignoreCase = true) || it.name.contains("app", ignoreCase = true))
+            } ?: artifactsResponse.artifacts.firstOrNull { !it.expired }
+
+            if (artifact == null) {
+                return@withContext Result.failure(Exception("No APK artifacts found for run #$runId"))
+            }
+
+            val tempZip = File(context.cacheDir, "artifact_${artifact.id}.zip")
+            val responseBody = api.downloadArtifact(getAuthHeader(), artifact.archive_download_url)
+            val totalBytes = artifact.size_in_bytes
+
+            FileOutputStream(tempZip).use { output ->
+                val input = responseBody.byteStream()
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                var totalDownloaded = 0L
+
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    output.write(buffer, 0, bytesRead)
+                    totalDownloaded += bytesRead
+                    onProgress(totalDownloaded, totalBytes)
+                }
+            }
+
+            destinationFile.parentFile?.mkdirs()
+            var apkFound = false
+
+            ZipInputStream(FileInputStream(tempZip)).use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    if (entry.name.endsWith(".apk", ignoreCase = true)) {
+                        FileOutputStream(destinationFile).use { fos ->
+                            zis.copyTo(fos)
+                        }
+                        apkFound = true
+                        break
+                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
+                }
+            }
+
+            tempZip.delete()
+
+            if (apkFound && destinationFile.exists() && destinationFile.length() > 0) {
+                Result.success(destinationFile)
+            } else {
+                Result.failure(Exception("No valid .apk binary extracted from the artifact ZIP archive."))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     companion object {
         private const val BASE_URL = "https://api.github.com/"
+        private const val WORKFLOW_FILE = "build_apk.yml"
     }
 }
