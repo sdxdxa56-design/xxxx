@@ -19,6 +19,7 @@ import com.appinspector.presentation.theme.CrashRed
 import com.appinspector.presentation.theme.PrimaryEmerald
 import com.appinspector.presentation.theme.SurfaceDark
 import com.appinspector.presentation.theme.SurfaceVariantDark
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +35,14 @@ fun DownloadProgressScreen(
 
     LaunchedEffect(owner, repo, branch) {
         viewModel.downloadProject(owner, repo, branch)
+    }
+
+    LaunchedEffect(downloadState) {
+        if (downloadState is DownloadState.Success) {
+            delay(1200)
+            val dir = (downloadState as DownloadState.Success).downloadedDirectory
+            onDownloadComplete(dir.absolutePath)
+        }
     }
 
     Scaffold(
@@ -190,46 +199,14 @@ fun DownloadProgressScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                text = "Successfully saved ${state.totalFiles} files locally into sandbox storage.",
+                                text = "Saved ${state.totalFiles} files. Preparing cloud build pipeline...",
                                 color = Color.Gray,
                                 fontSize = 13.sp
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                            Surface(
-                                color = SurfaceVariantDark,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = state.downloadedDirectory.absolutePath,
-                                    color = Color.LightGray,
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(10.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Button(
-                                onClick = {
-                                    onDownloadComplete(state.downloadedDirectory.absolutePath)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryEmerald)
-                            ) {
-                                Text(
-                                    text = "Continue to Inspection",
-                                    color = Color.Black,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                            }
+                            CircularProgressIndicator(color = PrimaryEmerald, modifier = Modifier.size(24.dp))
                         }
                     }
                 }

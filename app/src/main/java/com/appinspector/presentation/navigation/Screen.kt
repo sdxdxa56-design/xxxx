@@ -16,4 +16,7 @@ sealed class Screen(val route: String) {
     data object DownloadProgress : Screen("download_progress/{owner}/{repo}/{branch}") {
         fun createRoute(owner: String, repo: String, branch: String) = "download_progress/$owner/$repo/$branch"
     }
+    data object BuildProgress : Screen("build_progress/{owner}/{repo}/{branch}") {
+        fun createRoute(owner: String, repo: String, branch: String) = "build_progress/$owner/$repo/$branch"
+    }
 }

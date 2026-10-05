@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.appinspector.data.local.GitHubCredentials
 import com.appinspector.presentation.analysis.ErrorDetailScreen
 import com.appinspector.presentation.analysis.ErrorDetailViewModel
+import com.appinspector.presentation.build.BuildProgressScreen
 import com.appinspector.presentation.github.BranchPickerScreen
 import com.appinspector.presentation.github.DownloadProgressScreen
 import com.appinspector.presentation.github.GitHubLoginScreen
@@ -223,11 +224,33 @@ fun AppNavigation(
                 repo = repo,
                 branch = branch,
                 viewModel = gitHubViewModel,
-                onDownloadComplete = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Home.route) { inclusive = false }
+                onDownloadComplete = { _ ->
+                    navController.navigate(Screen.BuildProgress.createRoute(owner, repo, branch)) {
+                        popUpTo(Screen.DownloadProgress.route) { inclusive = true }
                     }
                 },
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.BuildProgress.route,
+            arguments = listOf(
+                navArgument("owner") { type = NavType.StringType },
+                navArgument("repo") { type = NavType.StringType },
+                navArgument("branch") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val owner = backStackEntry.arguments?.getString("owner").orEmpty()
+            val repo = backStackEntry.arguments?.getString("repo").orEmpty()
+            val branch = backStackEntry.arguments?.getString("branch").orEmpty()
+            BuildProgressScreen(
+                owner = owner,
+                repo = repo,
+                branch = branch,
+                viewModel = gitHubViewModel,
                 onBack = {
                     navController.popBackStack()
                 }
