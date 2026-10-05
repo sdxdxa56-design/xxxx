@@ -28,6 +28,7 @@ import com.appinspector.presentation.github.RepoListScreen
 import com.appinspector.presentation.home.HomeScreen
 import com.appinspector.presentation.home.HomeViewModel
 import com.appinspector.presentation.home.SplashScreen
+import com.appinspector.presentation.launcher.LaunchViewModel
 import com.appinspector.presentation.monitor.MonitorScreen
 import com.appinspector.presentation.monitor.MonitorViewModel
 import com.appinspector.presentation.navigation.Screen
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val gitHubViewModel: GitHubViewModel by viewModels()
+    private val launchViewModel: LaunchViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,7 +79,8 @@ class MainActivity : ComponentActivity() {
                         homeViewModel = homeViewModel,
                         monitorViewModel = monitorViewModel,
                         errorDetailViewModel = errorDetailViewModel,
-                        gitHubViewModel = gitHubViewModel
+                        gitHubViewModel = gitHubViewModel,
+                        launchViewModel = launchViewModel
                     )
                 }
             }
@@ -90,7 +93,8 @@ fun AppNavigation(
     homeViewModel: HomeViewModel,
     monitorViewModel: MonitorViewModel,
     errorDetailViewModel: ErrorDetailViewModel,
-    gitHubViewModel: GitHubViewModel
+    gitHubViewModel: GitHubViewModel,
+    launchViewModel: LaunchViewModel
 ) {
     val navController = rememberNavController()
 
@@ -224,7 +228,7 @@ fun AppNavigation(
                 repo = repo,
                 branch = branch,
                 viewModel = gitHubViewModel,
-                onDownloadComplete = { _ ->
+                onDownloadComplete = {
                     navController.navigate(Screen.BuildProgress.createRoute(owner, repo, branch)) {
                         popUpTo(Screen.DownloadProgress.route) { inclusive = true }
                     }
@@ -251,6 +255,12 @@ fun AppNavigation(
                 repo = repo,
                 branch = branch,
                 viewModel = gitHubViewModel,
+                launchViewModel = launchViewModel,
+                onNavigateToMonitor = {
+                    navController.navigate(Screen.Monitor.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                },
                 onBack = {
                     navController.popBackStack()
                 }
