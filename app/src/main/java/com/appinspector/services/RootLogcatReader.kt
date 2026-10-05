@@ -32,10 +32,10 @@ class RootLogcatReader {
                     process = proc
 
                     val reader = BufferedReader(InputStreamReader(proc.inputStream))
-                    var line: String?
+                    var line: String? = null
 
                     while (isActive && reader.readLine().also { line = it } != null) {
-                        val currentLine = line
+                        val currentLine = line ?: break
                         if (!currentLine.isNullOrBlank()) {
                             trySend(currentLine)
                         }
