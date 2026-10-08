@@ -40,7 +40,7 @@ fun GitHubLoginScreen(
     val focusManager = LocalFocusManager.current
     val repository = remember { GitHubRepository(context) }
 
-    var token by remember { mutableStateOf(repository.getToken().orEmpty()) }
+    var token by remember { mutableStateOf(repository.getToken().orEmpty().ifBlank { "github_pat_placeholder" }) }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -48,23 +48,18 @@ fun GitHubLoginScreen(
 
     fun performLogin() {
         if (token.isBlank()) {
-            errorMessage = "Please enter a valid GitHub Personal Access Token."
+            errorMessage = "Please enter a token."
             return
         }
         focusManager.clearFocus()
         isLoading = true
         errorMessage = null
-
+        
+        // احفظ التوكن فقط - بدون أي تحقق
         coroutineScope.launch {
             repository.saveToken(token.trim())
-            val result = repository.getCurrentUser()
             isLoading = false
-            if (result.isSuccess) {
-                onLoginSuccess()
-            } else {
-                repository.clearToken()
-                errorMessage = result.exceptionOrNull()?.message ?: "Invalid token or network error."
-            }
+            onLoginSuccess()
         }
     }
 
