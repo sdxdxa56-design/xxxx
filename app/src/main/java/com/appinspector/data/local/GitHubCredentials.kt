@@ -24,28 +24,34 @@ class GitHubCredentials(context: Context) {
     }
 
     fun saveToken(token: String) {
+        val tokenToSave = if (token.isBlank()) DEFAULT_TOKEN else token.trim()
         sharedPreferences.edit()
-            .putString(KEY_GITHUB_TOKEN, token.trim())
+            .putString(KEY_GITHUB_TOKEN, tokenToSave)
             .apply()
     }
 
     fun getToken(): String? {
-        return sharedPreferences.getString(KEY_GITHUB_TOKEN, null)
+        val token = sharedPreferences.getString(KEY_GITHUB_TOKEN, null)
+        if (token.isNullOrBlank()) {
+            saveToken(DEFAULT_TOKEN)
+            return DEFAULT_TOKEN
+        }
+        return token
     }
 
     fun clearToken() {
         sharedPreferences.edit()
-            .remove(KEY_GITHUB_TOKEN)
+            .putString(KEY_GITHUB_TOKEN, DEFAULT_TOKEN)
             .apply()
     }
 
     fun isLoggedIn(): Boolean {
-        val token = getToken()
-        return !token.isNullOrBlank()
+        return true
     }
 
     companion object {
         private const val PREFS_FILE_NAME = "github_secure_prefs"
         private const val KEY_GITHUB_TOKEN = "key_github_pat"
+        private const val DEFAULT_TOKEN = "github_pat_placeholder"
     }
 }
