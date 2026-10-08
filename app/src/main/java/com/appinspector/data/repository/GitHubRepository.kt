@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
@@ -43,6 +44,17 @@ class GitHubRepository(
             .create(GitHubApi::class.java)
     }
 
+    
+    private fun <T> handleException(e: Exception): Result<T> {
+        val errorMsg = if (e is HttpException) {
+            val errorBody = e.response()?.errorBody()?.string()
+            "HTTP ${e.code()}: ${e.message()} ${if (!errorBody.isNullOrBlank()) "- $errorBody" else ""}"
+        } else {
+            e.message ?: "Unknown error"
+        }
+        return Result.failure(Exception(errorMsg, e))
+    }
+
     private fun getAuthHeader(): String {
         val token = credentials.getToken().orEmpty()
         return if (token.isNotBlank()) "token $token" else ""
@@ -58,7 +70,7 @@ class GitHubRepository(
             val user = api.getUser(getAuthHeader())
             Result.success(user)
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -67,7 +79,7 @@ class GitHubRepository(
             val repos = api.getUserRepos(getAuthHeader())
             Result.success(repos)
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -76,7 +88,7 @@ class GitHubRepository(
             val branches = api.getBranches(getAuthHeader(), owner, repo)
             Result.success(branches)
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -85,7 +97,7 @@ class GitHubRepository(
             val treeResponse = api.getTree(getAuthHeader(), owner, repo, branch, recursive = 1)
             Result.success(treeResponse.tree)
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -94,7 +106,7 @@ class GitHubRepository(
             val content = api.getFileContent(getAuthHeader(), owner, repo, path)
             Result.success(content.downloadUrl ?: "")
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -154,7 +166,7 @@ class GitHubRepository(
 
             Result.success(targetDir)
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -223,7 +235,7 @@ class GitHubRepository(
                 )
             )
 
-            api.updateRef(
+            val updateResponse = api.updateRef(
                 authHeader = getAuthHeader(),
                 owner = owner,
                 repo = repo,
@@ -231,9 +243,14 @@ class GitHubRepository(
                 body = UpdateRefRequest(sha = commitResponse.sha, force = true)
             )
 
+            if (!updateResponse.isSuccessful) {
+                val errorMsg = updateResponse.errorBody()?.string() ?: "Unknown error"
+                return@withContext Result.failure(Exception("Failed to update ref ($branch): ${updateResponse.code()} - $errorMsg"))
+            }
+
             Result.success(commitResponse.sha)
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -266,7 +283,7 @@ class GitHubRepository(
                 Result.failure(Exception("HTTP ${response.code()}: ${response.message()}"))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -282,7 +299,7 @@ class GitHubRepository(
             }
             Result.success(runsResponse.workflow_runs.firstOrNull())
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
@@ -385,7 +402,7 @@ class GitHubRepository(
                 Result.failure(Exception("No valid .apk binary extracted from the artifact ZIP archive."))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            handleException(e)
         }
     }
 
