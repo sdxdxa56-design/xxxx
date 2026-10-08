@@ -34,9 +34,10 @@ sealed class DownloadState {
 }
 
 class GitHubViewModel(
-    application: Application,
-    private val repository: GitHubRepository = GitHubRepository(application)
+    application: Application
 ) : AndroidViewModel(application) {
+
+    private val repository: GitHubRepository = GitHubRepository(application)
 
     private val _currentUser = MutableStateFlow<UserDto?>(null)
     val currentUser: StateFlow<UserDto?> = _currentUser.asStateFlow()
