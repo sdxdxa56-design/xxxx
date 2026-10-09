@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.appinspector.data.repository.GitHubRepository
 import com.appinspector.presentation.theme.CrashRed
 import com.appinspector.presentation.theme.PrimaryEmerald
+import com.appinspector.presentation.theme.SecondaryTeal
 import com.appinspector.presentation.theme.SurfaceDark
 import com.appinspector.presentation.theme.SurfaceVariantDark
 import kotlinx.coroutines.launch
