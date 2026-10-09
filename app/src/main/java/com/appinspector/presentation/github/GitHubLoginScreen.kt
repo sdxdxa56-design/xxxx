@@ -219,6 +219,24 @@ fun GitHubLoginScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
+                OutlinedButton(
+                    onClick = {
+                        repository.clearToken()
+                        onLoginSuccess()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = SecondaryTeal
+                    )
+                ) {
+                    Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Skip / Continue without Token", fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = { performLogin() },
                     modifier = Modifier
