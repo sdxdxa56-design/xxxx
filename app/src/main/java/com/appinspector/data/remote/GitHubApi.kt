@@ -9,12 +9,12 @@ interface GitHubApi {
 
     @GET("user")
     suspend fun getUser(
-        @Header("Authorization") authHeader: String
+        @Header("Authorization") authHeader: String?
     ): UserDto
 
     @GET("user/repos")
     suspend fun getUserRepos(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Query("sort") sort: String = "updated",
         @Query("per_page") perPage: Int = 100,
         @Query("type") type: String = "all"
@@ -22,7 +22,7 @@ interface GitHubApi {
 
     @GET("users/{username}/repos")
     suspend fun getUserPublicRepos(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("username") username: String,
         @Query("sort") sort: String = "updated",
         @Query("per_page") perPage: Int = 100
@@ -30,7 +30,7 @@ interface GitHubApi {
 
     @GET("repos/{owner}/{repo}/branches")
     suspend fun getBranches(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Query("per_page") perPage: Int = 100
@@ -38,7 +38,7 @@ interface GitHubApi {
 
     @GET("repos/{owner}/{repo}/git/trees/{branch}")
     suspend fun getTree(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("branch") branch: String,
@@ -47,7 +47,7 @@ interface GitHubApi {
 
     @GET("repos/{owner}/{repo}/contents/{path}")
     suspend fun getFileContent(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("path") path: String,
@@ -56,13 +56,13 @@ interface GitHubApi {
 
     @GET
     suspend fun downloadRawFile(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Url url: String
     ): ResponseBody
 
     @POST("repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches")
     suspend fun triggerWorkflow(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("workflow_id") workflowId: String,
@@ -71,7 +71,7 @@ interface GitHubApi {
 
     @GET("repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs")
     suspend fun getWorkflowRuns(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("workflow_id") workflowId: String,
@@ -80,7 +80,7 @@ interface GitHubApi {
 
     @GET("repos/{owner}/{repo}/actions/runs")
     suspend fun getAllWorkflowRuns(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Query("per_page") perPage: Int = 5
@@ -88,7 +88,7 @@ interface GitHubApi {
 
     @GET("repos/{owner}/{repo}/actions/runs/{run_id}")
     suspend fun getWorkflowRun(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("run_id") runId: Long
@@ -96,7 +96,7 @@ interface GitHubApi {
 
     @GET("repos/{owner}/{repo}/actions/runs/{run_id}/artifacts")
     suspend fun getRunArtifacts(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("run_id") runId: Long
@@ -105,13 +105,13 @@ interface GitHubApi {
     @Streaming
     @GET
     suspend fun downloadArtifact(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Url url: String
     ): ResponseBody
 
     @POST("repos/{owner}/{repo}/git/blobs")
     suspend fun createBlob(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Body body: CreateBlobRequest
@@ -119,7 +119,7 @@ interface GitHubApi {
 
     @POST("repos/{owner}/{repo}/git/trees")
     suspend fun createTree(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Body body: CreateTreeRequest
@@ -127,7 +127,7 @@ interface GitHubApi {
 
     @POST("repos/{owner}/{repo}/git/commits")
     suspend fun createCommit(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Body body: CreateCommitRequest
@@ -135,7 +135,7 @@ interface GitHubApi {
 
     @PATCH("repos/{owner}/{repo}/git/refs/heads/{branch}")
     suspend fun updateRef(
-        @Header("Authorization") authHeader: String,
+        @Header("Authorization") authHeader: String?,
         @Path("owner") owner: String,
         @Path("repo") repo: String,
         @Path("branch") branch: String,
