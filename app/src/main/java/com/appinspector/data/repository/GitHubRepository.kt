@@ -55,9 +55,9 @@ class GitHubRepository(
         return Result.failure(Exception(errorMsg, e))
     }
 
-    private fun getAuthHeader(): String {
+    private fun getAuthHeader(): String? {
         val token = credentials.getToken().orEmpty()
-        return if (token.isNotBlank()) "token $token" else ""
+        return if (token.isNotBlank()) "token $token" else null
     }
 
     fun saveToken(token: String) = credentials.saveToken(token)
@@ -74,9 +74,15 @@ class GitHubRepository(
         }
     }
 
-    suspend fun getRepos(): Result<List<RepoDto>> = withContext(Dispatchers.IO) {
+    suspend fun getRepos(username: String? = null): Result<List<RepoDto>> = withContext(Dispatchers.IO) {
         try {
-            val repos = api.getUserRepos(getAuthHeader())
+            val token = getToken()
+            val repos = if (token.isNullOrBlank()) {
+                val targetUser = username.takeIf { !it.isNullOrBlank() } ?: "sdxdxa56-design"
+                api.getUserPublicRepos(getAuthHeader(), targetUser)
+            } else {
+                api.getUserRepos(getAuthHeader())
+            }
             Result.success(repos)
         } catch (e: Exception) {
             handleException(e)
