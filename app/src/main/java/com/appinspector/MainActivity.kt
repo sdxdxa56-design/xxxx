@@ -132,12 +132,7 @@ fun AppNavigation(
                     navController.navigate(Screen.ErrorDetail.createRoute(errorId))
                 },
                 onNavigateToGitHub = {
-                    val credentials = GitHubCredentials(AppInspectorApp.instance)
-                    if (credentials.isLoggedIn()) {
-                        navController.navigate(Screen.RepoList.route)
-                    } else {
-                        navController.navigate(Screen.GitHubLogin.route)
-                    }
+                    navController.navigate(Screen.GitHubLogin.route)
                 }
             )
         }
