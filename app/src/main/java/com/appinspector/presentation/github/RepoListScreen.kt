@@ -52,7 +52,13 @@ fun RepoListScreen(
             isLoading = true
             errorMessage = null
             try {
-                repos = repository.getRepositories(targetUser.ifBlank { null })
+                val result = repository.getRepos(targetUser.ifBlank { null })
+                if (result.isSuccess) {
+                    repos = result.getOrNull() ?: emptyList()
+                } else {
+                    errorMessage = result.exceptionOrNull()?.message ?: "Failed to load repositories"
+                    repos = emptyList()
+                }
             } catch (e: Exception) {
                 errorMessage = e.message ?: "Failed to load repositories"
                 repos = emptyList()
