@@ -38,50 +38,43 @@ fun RepoListScreen(
     val coroutineScope = rememberCoroutineScope()
     val repository = remember { GitHubRepository(context) }
 
-    var searchQuery by remember { mutableStateOf("") }
+    var usernameInput by remember { mutableStateOf("" ) }
     var repos by remember { mutableStateOf<List<RepoDto>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+    var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var searchQuery by remember { mutableStateOf("" ) }
+    var showDirectModal by remember { mutableStateOf(false) }
+    var directOwner by remember { mutableStateOf("" ) }
+    var directRepo by remember { mutableStateOf("" ) }
 
-    fun loadRepos() {
-        isLoading = true
-        errorMessage = null
+    val loadRepos = { targetUser: String ->
         coroutineScope.launch {
-            val result = repository.getRepos()
-            isLoading = false
-            if (result.isSuccess) {
-                repos = result.getOrNull() ?: emptyList()
-            } else {
-                errorMessage = result.exceptionOrNull()?.message ?: "Failed to fetch repositories."
+            isLoading = true
+            errorMessage = null
+            try {
+                repos = repository.getRepositories(targetUser.ifBlank { null })
+            } catch (e: Exception) {
+                errorMessage = e.message ?: "Failed to load repositories"
+                repos = emptyList()
+            } finally {
+                isLoading = false
             }
         }
     }
 
     LaunchedEffect(Unit) {
-        loadRepos()
+        loadRepos("")
     }
 
-    val filteredRepos = remember(repos, searchQuery) {
-        if (searchQuery.isBlank()) {
-            repos
-        } else {
-            repos.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                it.fullName.contains(searchQuery, ignoreCase = true)
-            }
-        }
+    val filteredRepos = repos.filter {
+        it.name.contains(searchQuery, ignoreCase = true) ||
+        it.fullName.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Your Repositories (${filteredRepos.size})",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                },
+                title = { Text("GitHub Repositories", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -92,10 +85,10 @@ fun RepoListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { loadRepos() }) {
+                    IconButton(onClick = { showDirectModal = true }) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Direct Input",
                             tint = PrimaryEmerald
                         )
                     }
@@ -111,47 +104,69 @@ fun RepoListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp)
+                .padding(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = usernameInput,
+                    onValueChange = { usernameInput = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Username or Org", color = Color.Gray) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryEmerald,
+                        unfocusedBorderColor = Color.DarkGray,
+                        focusedLabelColor = PrimaryEmerald,
+                        unfocusedLabelColor = Color.Gray,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = PrimaryEmerald
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Button(
+                    onClick = { loadRepos(usernameInput) },
+                    modifier = Modifier.height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryEmerald)
+                ) {
+                    Text("Load", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search repositories...", color = Color.Gray) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
                 singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = Color.Gray
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear",
-                                tint = Color.Gray
-                            )
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = PrimaryEmerald,
                     unfocusedBorderColor = Color.DarkGray,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    cursorColor = PrimaryEmerald,
-                    focusedContainerColor = SurfaceDark,
-                    unfocusedContainerColor = SurfaceDark
-                )
+                    cursorColor = PrimaryEmerald
+                ),
+                shape = RoundedCornerShape(12.dp)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Repositories",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             when {
                 isLoading -> {
@@ -163,12 +178,11 @@ fun RepoListScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = PrimaryEmerald)
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text("Loading repositories...", color = Color.Gray, fontSize = 14.sp)
                         }
                     }
                 }
-
                 errorMessage != null -> {
                     Box(
                         modifier = Modifier
@@ -176,34 +190,34 @@ fun RepoListScreen(
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(24.dp)
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = CrashRed.copy(alpha = 0.15f)),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.ErrorOutline,
-                                contentDescription = null,
-                                tint = CrashRed,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = errorMessage.orEmpty(),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(
-                                onClick = { loadRepos() },
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryEmerald)
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Retry", color = Color.Black, fontWeight = FontWeight.Bold)
+                                Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = CrashRed, modifier = Modifier.size(36.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = errorMessage.orEmpty(),
+                                    color = CrashRed,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = { loadRepos(usernameInput) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = CrashRed)
+                                ) {
+                                    Text("Retry", color = Color.White, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
                 }
-
                 filteredRepos.isEmpty() -> {
                     Box(
                         modifier = Modifier
@@ -211,123 +225,158 @@ fun RepoListScreen(
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.FolderOpen,
-                                contentDescription = null,
-                                tint = Color.DarkGray,
-                                modifier = Modifier.size(56.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = if (searchQuery.isBlank()) "No repositories found" else "No matching repositories",
-                                color = Color.Gray,
-                                fontSize = 15.sp
-                            )
-                        }
+                        Text(
+                            text = if (searchQuery.isBlank()) "No repositories found" else "No matching repositories",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
                     }
                 }
-
                 else -> {
                     LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredRepos, key = { it.id }) { repo ->
-                            RepoItemCard(
-                                repo = repo,
-                                onClick = {
-                                    val parts = repo.fullName.split("/")
-                                    val owner = if (parts.size >= 2) parts[0] else ""
-                                    val repoName = if (parts.size >= 2) parts[1] else repo.name
-                                    onSelectRepo(owner, repoName)
+                        items(filteredRepos) { repo ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val parts = repo.fullName.split("/")
+                                        if (parts.size == 2) {
+                                            onSelectRepo(parts[0], parts[1])
+                                        }
+                                    },
+                                colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (repo.isPrivate) Icons.Default.Lock else Icons.Default.Public,
+                                        contentDescription = null,
+                                        tint = if (repo.isPrivate) AccentYellow else PrimaryEmerald,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = repo.name,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
+                                        if (repo.description != null) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = repo.description,
+                                                color = Color.Gray,
+                                                fontSize = 13.sp,
+                                                maxLines = 2
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = SurfaceVariantDark
+                                            ) {
+                                                Text(
+                                                    text = repo.defaultBranch ?: "main",
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    color = Color.LightGray,
+                                                    fontSize = 11.sp
+                                                )
+                                            }
+                                            if (repo.language != null) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = repo.language,
+                                                    color = SecondaryTeal,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = Color.Gray
+                                    )
                                 }
-                            )
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-fun RepoItemCard(
-    repo: RepoDto,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = if (repo.isPrivate) Icons.Default.Lock else Icons.Default.Public,
-                        contentDescription = null,
-                        tint = if (repo.isPrivate) AccentYellow else SecondaryTeal,
-                        modifier = Modifier.size(18.dp)
+    if (showDirectModal) {
+        AlertDialog(
+            onDismissRequest = { showDirectModal = false },
+            containerColor = SurfaceDark,
+            title = { Text("Open Repository Directly", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Enter owner and repository name directly (public or private):", color = Color.Gray, fontSize = 13.sp)
+                    OutlinedTextField(
+                        value = directOwner,
+                        onValueChange = { directOwner = it },
+                        label = { Text("Owner (e.g. torvalds)") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryEmerald,
+                            unfocusedBorderColor = Color.DarkGray,
+                            focusedLabelColor = PrimaryEmerald,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = repo.name,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        maxLines = 1
-                    )
-                }
-
-                Surface(
-                    color = (if (repo.isPrivate) AccentYellow else PrimaryEmerald).copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        text = if (repo.isPrivate) "Private" else "Public",
-                        color = if (repo.isPrivate) AccentYellow else PrimaryEmerald,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    OutlinedTextField(
+                        value = directRepo,
+                        onValueChange = { directRepo = it },
+                        label = { Text("Repository name (e.g. linux)") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryEmerald,
+                            unfocusedBorderColor = Color.DarkGray,
+                            focusedLabelColor = PrimaryEmerald,
+                            unfocusedLabelColor = Color.Gray,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     )
                 }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (directOwner.isNotBlank() && directRepo.isNotBlank()) {
+                            showDirectModal = false
+                            onSelectRepo(directOwner.trim(), directRepo.trim())
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryEmerald)
+                ) {
+                    Text("Open", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDirectModal = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = repo.fullName,
-                color = Color.Gray,
-                fontSize = 12.sp
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.ForkRight,
-                    contentDescription = null,
-                    tint = Color.Gray,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = repo.defaultBranch ?: "main",
-                    color = Color.LightGray,
-                    fontSize = 11.sp
-                )
-            }
-        }
+        )
     }
 }
