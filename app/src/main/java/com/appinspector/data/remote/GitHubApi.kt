@@ -20,6 +20,14 @@ interface GitHubApi {
         @Query("type") type: String = "all"
     ): List<RepoDto>
 
+    @GET("users/{username}/repos")
+    suspend fun getUserPublicRepos(
+        @Header("Authorization") authHeader: String,
+        @Path("username") username: String,
+        @Query("sort") sort: String = "updated",
+        @Query("per_page") perPage: Int = 100
+    ): List<RepoDto>
+
     @GET("repos/{owner}/{repo}/branches")
     suspend fun getBranches(
         @Header("Authorization") authHeader: String,
